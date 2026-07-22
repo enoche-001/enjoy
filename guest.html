@@ -91,11 +91,28 @@ function loadFeed() {
       card.innerHTML = `<img src="${entry.imageUrl}" loading="lazy"><div class="caption-overlay">${entry.caption || ''}</div>`;
       feed.appendChild(card);
     });
-  }, () => showExpired("This link has expired."));
+  }, (err) => {
+    // This is a query failure (permissions, missing index, network), NOT proof
+    // the link/token is expired — the token was already validated above.
+    // Showing "expired" here was misleading; surface the real cause instead.
+    console.error('Guest feed query failed:', err.code, err.message);
+    showFeedError(err);
+  });
 }
 
 function showExpired(msg) {
   feed.innerHTML = `<div class="expired-box"><div class="glyph">${ICON_HOURGLASS}</div><h3>${msg}</h3><p style="color:var(--muted);">Ask for a new link.</p></div>`;
+}
+
+function showFeedError(err) {
+  const isIndexError = err && err.code === 'failed-precondition';
+  const msg = isIndexError
+    ? "This link is valid, but the photo feed can't load yet."
+    : "Couldn't load photos right now.";
+  const hint = isIndexError
+    ? "A required Firestore index hasn't been created. Open the browser console on this page — Firebase prints a link there to auto-create it in one click."
+    : "Check your connection and try again.";
+  feed.innerHTML = `<div class="expired-box"><div class="glyph">${ICON_HOURGLASS}</div><h3>${msg}</h3><p style="color:var(--muted);">${hint}</p></div>`;
 }
 </script>
 </body>

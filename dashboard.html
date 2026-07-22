@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
 <title>#ENJOY Vault</title>
 <link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ENJOY Vault">
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}); }</script>
 </head>
 <body>
 <div class="screen">
@@ -76,6 +84,16 @@
     </div>
     <button class="btn btn-gold" id="savePasscode">Save passcode</button>
     <div class="error-msg" id="settingsMsg"></div>
+
+    <hr style="border:none; border-top:1px solid var(--line); margin:22px 0;">
+
+    <div class="field">
+      <label>Device passkey (this device only)</label>
+      <input type="password" inputmode="numeric" id="devicePasskeyInput" placeholder="4+ digits — skip email &amp; password next time">
+    </div>
+    <button class="btn btn-gold" id="saveDevicePasskey">Save device passkey</button>
+    <p class="lock-alt-link" id="removeDevicePasskey" style="display:none;">Remove device passkey</p>
+    <div class="error-msg" id="devicePasskeyMsg"></div>
   </div>
 </div>
 
@@ -129,6 +147,55 @@
     <button class="btn viewer-delete-btn" id="viewerDeleteBtn">Delete photo</button>
   </div>
 </div>
+
+<!-- Device passkey lock screen: shown instead of the feed once a passkey is set for this device+account -->
+<div class="device-lock hidden" id="deviceLockScreen">
+  <div class="auth-card">
+    <div class="lock-glyph" style="margin-bottom:10px;">
+      <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/><circle cx="12" cy="16" r="1.4" fill="currentColor" stroke="none"/></svg>
+    </div>
+    <h1>#ENJOY Vault</h1>
+    <div class="field">
+      <label>Device passkey</label>
+      <input type="password" inputmode="numeric" id="deviceLockInput" placeholder="Enter your passkey" autocomplete="off">
+    </div>
+    <button class="btn btn-primary" id="deviceLockUnlockBtn">Unlock</button>
+    <div class="error-msg" id="deviceLockError"></div>
+    <p class="lock-alt-link" id="deviceLockSignOut">Not you? Sign out and use email &amp; password</p>
+  </div>
+</div>
+
+<!-- First-time-on-this-device prompt: offer to set a passkey so future opens are quicker -->
+<div class="device-lock hidden" id="devicePasskeySetup">
+  <div class="auth-card">
+    <div class="lock-glyph" style="margin-bottom:10px;">
+      <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/><circle cx="12" cy="16" r="1.4" fill="currentColor" stroke="none"/></svg>
+    </div>
+    <h1>Save a passkey?</h1>
+    <p style="color:var(--muted); font-size:14px; margin-top:-10px;">You're signed in on this device. Set a short passkey so next time you can skip email &amp; password and just unlock with this.</p>
+    <div class="field">
+      <label>New passkey</label>
+      <input type="password" inputmode="numeric" id="passkeySetupInput" placeholder="4+ digits">
+    </div>
+    <div class="field">
+      <label>Confirm passkey</label>
+      <input type="password" inputmode="numeric" id="passkeySetupConfirm" placeholder="Re-enter">
+    </div>
+    <button class="btn btn-primary" id="passkeySetupSaveBtn">Save passkey</button>
+    <div class="error-msg" id="passkeySetupError"></div>
+    <p class="lock-alt-link" id="passkeySetupSkip">Not now</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  try {
+    if (localStorage.getItem('enjoyVault_devicePasskey_v1')) {
+      document.getElementById('deviceLockScreen').classList.remove('hidden');
+    }
+  } catch (e) { /* localStorage unavailable — just skip the lock screen */ }
+})();
+</script>
 
 <script type="module">
 import { auth, db, compressImage, uploadToImgBB, generateToken } from './firebase-config.js';
@@ -189,13 +256,105 @@ if (cachedEntries && cachedEntries.length) {
   renderFeed();
 }
 
+// ---------- Device passkey (local, per-device convenience unlock) ----------
+// This is NOT a replacement for the real Firebase login — it's a fast local
+// gate layered on top of an already-persisted Firebase session, so a
+// returning user on the same device can skip retyping email + password.
+// The passkey itself is never sent anywhere; it's hashed (with a random
+// per-device salt) and compared entirely in the browser.
+const DEVICE_PASSKEY_KEY = 'enjoyVault_devicePasskey_v1';
+const DEVICE_SETUP_DISMISSED_KEY = 'enjoyVault_passkeySetupDismissed';
+
+async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function randomSalt() {
+  const arr = new Uint8Array(16);
+  crypto.getRandomValues(arr);
+  return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function hasDevicePasskey() {
+  try { return !!localStorage.getItem(DEVICE_PASSKEY_KEY); } catch (e) { return false; }
+}
+
+async function saveDevicePasskeyRecord(passkey) {
+  const salt = randomSalt();
+  const hash = await sha256Hex(salt + ':' + passkey);
+  localStorage.setItem(DEVICE_PASSKEY_KEY, JSON.stringify({ salt, hash }));
+}
+
+async function verifyDevicePasskey(passkey) {
+  try {
+    const record = JSON.parse(localStorage.getItem(DEVICE_PASSKEY_KEY));
+    if (!record) return false;
+    const hash = await sha256Hex(record.salt + ':' + passkey);
+    return hash === record.hash;
+  } catch (e) { return false; }
+}
+
+function clearDevicePasskeyRecord() {
+  try { localStorage.removeItem(DEVICE_PASSKEY_KEY); localStorage.removeItem(DEVICE_SETUP_DISMISSED_KEY); } catch (e) {}
+}
+
+// Unlock screen (shown synchronously by the inline script above if a passkey exists)
+document.getElementById('deviceLockUnlockBtn').onclick = async () => {
+  const val = document.getElementById('deviceLockInput').value.trim();
+  const errEl = document.getElementById('deviceLockError');
+  if (!val) { errEl.textContent = 'Enter your passkey.'; return; }
+  const ok = await verifyDevicePasskey(val);
+  if (ok) {
+    document.getElementById('deviceLockInput').value = '';
+    errEl.textContent = '';
+    toggle('deviceLockScreen', false);
+  } else {
+    errEl.textContent = 'Incorrect passkey.';
+  }
+};
+document.getElementById('deviceLockInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('deviceLockUnlockBtn').click();
+});
+document.getElementById('deviceLockSignOut').onclick = () => {
+  clearDevicePasskeyRecord();
+  signOut(auth).then(() => window.location.href = 'index.html');
+};
+
+// First-time-on-this-device setup prompt
+document.getElementById('passkeySetupSaveBtn').onclick = async () => {
+  const val = document.getElementById('passkeySetupInput').value.trim();
+  const confirmVal = document.getElementById('passkeySetupConfirm').value.trim();
+  const errEl = document.getElementById('passkeySetupError');
+  if (val.length < 4) { errEl.textContent = 'Use at least 4 characters.'; return; }
+  if (val !== confirmVal) { errEl.textContent = "Passkeys don't match."; return; }
+  await saveDevicePasskeyRecord(val);
+  document.getElementById('passkeySetupInput').value = '';
+  document.getElementById('passkeySetupConfirm').value = '';
+  errEl.textContent = '';
+  toggle('devicePasskeySetup', false);
+};
+document.getElementById('passkeySetupSkip').onclick = () => {
+  try { localStorage.setItem(DEVICE_SETUP_DISMISSED_KEY, '1'); } catch (e) {}
+  toggle('devicePasskeySetup', false);
+};
+
+
 onAuthStateChanged(auth, (user) => {
-  if (!user || user.isAnonymous) { window.location.href = 'login.html'; return; }
+  if (!user || user.isAnonymous) { window.location.href = 'index.html'; return; }
   currentUser = user;
   listenToEntries();
+  try {
+    if (!hasDevicePasskey() && !localStorage.getItem(DEVICE_SETUP_DISMISSED_KEY)) {
+      toggle('devicePasskeySetup', true);
+    }
+  } catch (e) {}
 });
 
-document.getElementById('logoutBtn').onclick = () => signOut(auth).then(() => window.location.href = 'login.html');
+document.getElementById('logoutBtn').onclick = () => {
+  clearDevicePasskeyRecord();
+  signOut(auth).then(() => window.location.href = 'index.html');
+};
 
 // ---------- Feed ----------
 function listenToEntries() {
@@ -347,6 +506,9 @@ function resetUploadForm() {
 document.getElementById('settingsBtn').onclick = async () => {
   const snap = await getDoc(doc(db, 'settings', 'app'));
   document.getElementById('passcodeInput').value = snap.exists() ? (snap.data().passcode || '') : '';
+  document.getElementById('devicePasskeyInput').value = '';
+  document.getElementById('devicePasskeyMsg').textContent = '';
+  document.getElementById('removeDevicePasskey').style.display = hasDevicePasskey() ? 'block' : 'none';
   toggle('settingsModal', true);
 };
 document.getElementById('savePasscode').onclick = async () => {
@@ -354,6 +516,21 @@ document.getElementById('savePasscode').onclick = async () => {
   if (val.length < 4) { document.getElementById('settingsMsg').textContent = 'Use at least 4 characters.'; return; }
   await setDoc(doc(db, 'settings', 'app'), { passcode: val }, { merge: true });
   document.getElementById('settingsMsg').textContent = 'Saved.';
+};
+
+document.getElementById('saveDevicePasskey').onclick = async () => {
+  const val = document.getElementById('devicePasskeyInput').value.trim();
+  const msgEl = document.getElementById('devicePasskeyMsg');
+  if (val.length < 4) { msgEl.textContent = 'Use at least 4 characters.'; return; }
+  await saveDevicePasskeyRecord(val);
+  document.getElementById('devicePasskeyInput').value = '';
+  msgEl.textContent = 'Saved — this device can now unlock with just the passkey.';
+  document.getElementById('removeDevicePasskey').style.display = 'block';
+};
+document.getElementById('removeDevicePasskey').onclick = () => {
+  clearDevicePasskeyRecord();
+  document.getElementById('removeDevicePasskey').style.display = 'none';
+  document.getElementById('devicePasskeyMsg').textContent = 'Removed. This device will need full email & password next time.';
 };
 
 // ---------- Guest link generation ----------
