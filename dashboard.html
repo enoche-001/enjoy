@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>#ENJOY Vault</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="screen">
+
+  <div class="topbar">
+    <div class="brand">#ENJOY Vault</div>
+    <div class="icons">
+      <button class="icon-btn" id="filterBtn" title="Filter by date" aria-label="Filter by date">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="16" rx="2.5"/><line x1="3.5" y1="9.5" x2="20.5" y2="9.5"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>
+      </button>
+      <button class="icon-btn" id="linkBtn" title="Generate guest link" aria-label="Generate guest link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 0 0-7.07-7.07l-1.2 1.2"/><path d="M14 10a5 5 0 0 0-7.07 0L4.8 12.12a5 5 0 0 0 7.07 7.07l1.2-1.2"/></svg>
+      </button>
+      <button class="icon-btn" id="settingsBtn" title="Passcode settings" aria-label="Passcode settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/><circle cx="12" cy="16" r="1.4" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <button class="icon-btn" id="logoutBtn" title="Log out" aria-label="Log out">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="feed" id="feed">
+    <div class="loader">Loading your memories…</div>
+  </div>
+
+  <button class="fab" id="uploadFab" title="Add memory" aria-label="Add memory">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+</div>
+
+<!-- Upload modal -->
+<div class="modal-back hidden" id="uploadModal">
+  <div class="modal">
+    <button class="close-x" data-close="uploadModal" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+    <h3>New memory</h3>
+    <div class="field">
+      <label>Photo</label>
+      <input type="file" id="photoInput" accept="image/*">
+    </div>
+    <div class="field">
+      <label>Caption</label>
+      <textarea id="captionInput" rows="2" placeholder="Say something about it…"></textarea>
+    </div>
+    <div class="field">
+      <label>Date</label>
+      <input type="date" id="dateInput">
+    </div>
+    <div class="field">
+      <label>Mood</label>
+      <input type="text" id="moodInput" placeholder="How did this moment feel?">
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="lockCheck"><label for="lockCheck">Lock this one (passcode required to view)</label>
+    </div>
+    <button class="btn btn-primary" id="submitUpload">Save memory</button>
+    <div class="error-msg" id="uploadError"></div>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div class="modal-back hidden" id="settingsModal">
+  <div class="modal">
+    <button class="close-x" data-close="settingsModal" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+    <h3 class="modal-title-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/><circle cx="12" cy="16" r="1.4" fill="currentColor" stroke="none"/></svg> Passcode settings</h3>
+    <div class="field">
+      <label>Passcode for locked memories</label>
+      <input type="text" id="passcodeInput" placeholder="Set a 4+ digit passcode">
+    </div>
+    <button class="btn btn-gold" id="savePasscode">Save passcode</button>
+    <div class="error-msg" id="settingsMsg"></div>
+  </div>
+</div>
+
+<!-- Filter by date modal -->
+<div class="modal-back hidden" id="filterModal">
+  <div class="modal">
+    <button class="close-x" data-close="filterModal" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+    <h3>Filter by date</h3>
+    <div class="tag-row" id="filterOptions"></div>
+  </div>
+</div>
+
+<!-- Guest link modal -->
+<div class="modal-back hidden" id="linkModal">
+  <div class="modal">
+    <button class="close-x" data-close="linkModal" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+    <h3>Guest dashboard link</h3>
+    <p style="color:var(--muted); font-size:14px;">Anyone with this link can view the full photo feed (no locked photos). It stops working automatically after 24 hours.</p>
+    <button class="btn btn-gold" id="genLinkBtn">Generate 24h link</button>
+    <div class="link-result" id="linkResult" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- Passcode check modal (for opening a locked entry) -->
+<div class="modal-back hidden" id="passcodeModal">
+  <div class="modal passcode-box">
+    <button class="close-x" data-close="passcodeModal" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+    <h3 class="modal-title-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/><circle cx="12" cy="16" r="1.4" fill="currentColor" stroke="none"/></svg> Locked memory</h3>
+    <input type="text" id="passcodeCheckInput" placeholder="Enter passcode">
+    <br><br>
+    <button class="btn btn-primary" id="checkPasscodeBtn">Unlock</button>
+    <div class="error-msg" id="passcodeError"></div>
+  </div>
+</div>
+
+<!-- Full-screen image viewer: pinch/double-tap zoom + download + delete -->
+<div class="viewer-back hidden" id="viewerModal">
+  <div class="viewer-top">
+    <button class="viewer-icon" id="viewerDownloadBtn" aria-label="Download photo" title="Download photo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><polyline points="7 11 12 16 17 11"/><line x1="5" y1="21" x2="19" y2="21"/></svg>
+    </button>
+    <button class="viewer-icon" data-close="viewerModal" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+  </div>
+  <div class="viewer-zoom-wrap" id="viewerZoomWrap">
+    <img id="viewerImg" src="" alt="">
+  </div>
+  <div class="viewer-info">
+    <div class="viewer-caption" id="viewerCaption"></div>
+    <div class="viewer-mood" id="viewerMood"></div>
+    <div class="viewer-meta" id="viewerMeta"></div>
+    <button class="btn viewer-delete-btn" id="viewerDeleteBtn">Delete photo</button>
+  </div>
+</div>
+
+<script type="module">
+import { auth, db, compressImage, uploadToImgBB, generateToken } from './firebase-config.js';
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  collection, addDoc, doc, getDoc, setDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp, Timestamp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+let currentUser = null;
+let unlockedIds = new Set();
+let allEntries = [];
+let activeFilter = null; // { year, month } or null = all time
+let currentViewerEntryId = null;
+let currentViewerEntry = null;
+
+// Reusable inline SVG icons for JS-rendered markup
+const ICON_CAMERA = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.2l1-1.6A1.5 1.5 0 0 1 10 4.6h4a1.5 1.5 0 0 1 1.3.8l1 1.6h2.2A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="12.5" r="3.4"/></svg>`;
+const ICON_LOCK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/><circle cx="12" cy="16" r="1.4" fill="currentColor" stroke="none"/></svg>`;
+const ICON_UNLOCK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 7.6-1.2"/><circle cx="12" cy="16" r="1.4" fill="currentColor" stroke="none"/></svg>`;
+const ICON_SPARKLE = `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l1.6 5.4L19 9l-5.4 1.6L12 16l-1.6-5.4L5 9l5.4-1.6z"/></svg>`;
+
+// ---------- Feed cache (instant paint on repeat visits) ----------
+// Firestore's own persistentLocalCache (see firebase-config.js) already avoids
+// re-downloading everything from the network. This localStorage layer goes a
+// step further: it paints the last-seen feed the instant the page loads,
+// before auth or Firestore have even responded, so the app never sits on a
+// blank "Loading your memories…" screen for content the user has seen before.
+const FEED_CACHE_KEY = 'enjoyVault_feedCache_v1';
+
+function saveFeedCache(entries) {
+  try {
+    const plain = entries.map(e => ({
+      ...e,
+      date: e.date && e.date.toDate ? e.date.toDate().getTime() : null,
+      createdAt: e.createdAt && e.createdAt.toDate ? e.createdAt.toDate().getTime() : null
+    }));
+    localStorage.setItem(FEED_CACHE_KEY, JSON.stringify(plain));
+  } catch (err) { /* storage full or unavailable — safe to skip caching */ }
+}
+
+function loadFeedCache() {
+  try {
+    const raw = localStorage.getItem(FEED_CACHE_KEY);
+    if (!raw) return null;
+    const plain = JSON.parse(raw);
+    return plain.map(e => ({
+      ...e,
+      date: e.date ? { toDate: () => new Date(e.date) } : null,
+      createdAt: e.createdAt ? { toDate: () => new Date(e.createdAt) } : null
+    }));
+  } catch (err) { return null; }
+}
+
+// Paint immediately from cache while we wait on auth + the network.
+const cachedEntries = loadFeedCache();
+if (cachedEntries && cachedEntries.length) {
+  allEntries = cachedEntries;
+  renderFeed();
+}
+
+onAuthStateChanged(auth, (user) => {
+  if (!user || user.isAnonymous) { window.location.href = 'login.html'; return; }
+  currentUser = user;
+  listenToEntries();
+});
+
+document.getElementById('logoutBtn').onclick = () => signOut(auth).then(() => window.location.href = 'login.html');
+
+// ---------- Feed ----------
+function listenToEntries() {
+  const q = query(collection(db, 'entries'), orderBy('date', 'desc'));
+  onSnapshot(q, (snap) => {
+    allEntries = [];
+    snap.forEach(d => allEntries.push({ id: d.id, ...d.data() }));
+    renderFeed();
+    saveFeedCache(allEntries);
+  });
+}
+
+function renderFeed() {
+  const feed = document.getElementById('feed');
+  feed.innerHTML = '';
+
+  const entries = activeFilter
+    ? allEntries.filter(e => {
+        if (!e.date) return false;
+        const d = e.date.toDate();
+        return d.getFullYear() === activeFilter.year && d.getMonth() === activeFilter.month;
+      })
+    : allEntries;
+
+  if (entries.length === 0) {
+    feed.innerHTML = activeFilter
+      ? `<div class="empty-state"><div class="glyph">${ICON_CAMERA}</div>No memories from that month.</div>`
+      : `<div class="empty-state"><div class="glyph">${ICON_CAMERA}</div>No memories yet — tap + to add the first one.</div>`;
+    return;
+  }
+
+  // On this day (only makes sense when looking at everything)
+  if (!activeFilter) {
+    const today = new Date();
+    const onThisDay = allEntries.filter(e => {
+      if (!e.date) return false;
+      const d = e.date.toDate();
+      return d.getMonth() === today.getMonth() && d.getDate() === today.getDate() && d.getFullYear() !== today.getFullYear();
+    });
+    if (onThisDay.length) {
+      const banner = document.createElement('div');
+      banner.className = 'on-this-day';
+      banner.innerHTML = `<span class="inline-icon">${ICON_SPARKLE}</span> On this day: ${onThisDay.length} memory${onThisDay.length > 1 ? 'ies' : ''} from years past`;
+      feed.appendChild(banner);
+    }
+  }
+
+  let lastDateStr = '';
+  entries.forEach(entry => {
+    const d = entry.date ? entry.date.toDate() : new Date();
+    const dateStr = d.toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
+    if (dateStr !== lastDateStr) {
+      const h = document.createElement('div');
+      h.className = 'date-heading';
+      h.textContent = dateStr;
+      feed.appendChild(h);
+      lastDateStr = dateStr;
+    }
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    const isLocked = entry.isLocked && !unlockedIds.has(entry.id);
+    card.innerHTML = `
+      ${isLocked ? `<div style="aspect-ratio:4/5; display:flex; align-items:center; justify-content:center; background:var(--panel-2); flex-direction:column; gap:8px;">
+          <div class="lock-glyph">${ICON_LOCK}</div>
+          <div style="color:var(--muted); font-size:13px;">Tap to unlock</div>
+        </div>`
+        : `<img src="${entry.imageUrl}" loading="lazy">
+           <div class="caption-overlay">${entry.caption || ''}</div>`}
+      ${entry.isLocked ? `<div class="lock-badge">${isLocked ? ICON_LOCK : ICON_UNLOCK}</div>` : ''}
+    `;
+    card.style.cursor = 'pointer';
+    card.onclick = () => {
+      if (isLocked) openPasscodeCheck(entry.id);
+      else openViewer(entry);
+    };
+    feed.appendChild(card);
+  });
+}
+
+// ---------- Passcode for locked entries ----------
+let pendingUnlockId = null;
+function openPasscodeCheck(entryId) {
+  pendingUnlockId = entryId;
+  document.getElementById('passcodeCheckInput').value = '';
+  document.getElementById('passcodeError').textContent = '';
+  toggle('passcodeModal', true);
+}
+document.getElementById('checkPasscodeBtn').onclick = async () => {
+  const entered = document.getElementById('passcodeCheckInput').value.trim();
+  const settingsSnap = await getDoc(doc(db, 'settings', 'app'));
+  const realCode = settingsSnap.exists() ? settingsSnap.data().passcode : null;
+  if (!realCode) {
+    document.getElementById('passcodeError').textContent = 'No passcode set yet — set one in Settings first.';
+    return;
+  }
+  if (entered === realCode) {
+    unlockedIds.add(pendingUnlockId);
+    toggle('passcodeModal', false);
+    renderFeed();
+  } else {
+    document.getElementById('passcodeError').textContent = 'Wrong passcode.';
+  }
+};
+
+// ---------- Upload ----------
+document.getElementById('uploadFab').onclick = () => {
+  document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
+  toggle('uploadModal', true);
+};
+
+document.getElementById('submitUpload').onclick = async () => {
+  const fileInput = document.getElementById('photoInput');
+  const errEl = document.getElementById('uploadError');
+  errEl.textContent = '';
+  if (!fileInput.files[0]) { errEl.textContent = 'Choose a photo first.'; return; }
+
+  const btn = document.getElementById('submitUpload');
+  btn.disabled = true; btn.textContent = 'Uploading…';
+  try {
+    const compressed = await compressImage(fileInput.files[0]);
+    const url = await uploadToImgBB(compressed);
+    const dateVal = document.getElementById('dateInput').value;
+    await addDoc(collection(db, 'entries'), {
+      createdBy: currentUser.uid,
+      imageUrl: url,
+      caption: document.getElementById('captionInput').value.trim(),
+      mood: document.getElementById('moodInput').value.trim(),
+      date: Timestamp.fromDate(new Date(dateVal)),
+      isLocked: document.getElementById('lockCheck').checked,
+      createdAt: serverTimestamp()
+    });
+    resetUploadForm();
+    toggle('uploadModal', false);
+  } catch (err) {
+    errEl.textContent = 'Upload failed — check your connection and try again.';
+  }
+  btn.disabled = false; btn.textContent = 'Save memory';
+};
+
+function resetUploadForm() {
+  document.getElementById('photoInput').value = '';
+  document.getElementById('captionInput').value = '';
+  document.getElementById('moodInput').value = '';
+  document.getElementById('lockCheck').checked = false;
+}
+
+// ---------- Settings (passcode) ----------
+document.getElementById('settingsBtn').onclick = async () => {
+  const snap = await getDoc(doc(db, 'settings', 'app'));
+  document.getElementById('passcodeInput').value = snap.exists() ? (snap.data().passcode || '') : '';
+  toggle('settingsModal', true);
+};
+document.getElementById('savePasscode').onclick = async () => {
+  const val = document.getElementById('passcodeInput').value.trim();
+  if (val.length < 4) { document.getElementById('settingsMsg').textContent = 'Use at least 4 characters.'; return; }
+  await setDoc(doc(db, 'settings', 'app'), { passcode: val }, { merge: true });
+  document.getElementById('settingsMsg').textContent = 'Saved.';
+};
+
+// ---------- Guest link generation ----------
+document.getElementById('linkBtn').onclick = () => {
+  document.getElementById('linkResult').style.display = 'none';
+  toggle('linkModal', true);
+};
+document.getElementById('genLinkBtn').onclick = async () => {
+  const token = generateToken();
+  const expiresAt = Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000));
+  await setDoc(doc(db, 'shareLinks', token), {
+    createdBy: currentUser.uid,
+    expiresAt
+  });
+  const url = `${window.location.origin}${window.location.pathname.replace('dashboard.html', 'guest.html')}?token=${token}`;
+  const box = document.getElementById('linkResult');
+  box.style.display = 'block';
+  box.innerHTML = `${url}<div class="expiry-note">Expires in 24 hours · <button class="btn btn-ghost" style="padding:6px 12px; font-size:12px; margin-top:8px;" onclick="navigator.clipboard.writeText('${url}')">Copy link</button></div>`;
+};
+
+// ---------- Filter by date ----------
+function availableMonths() {
+  const seen = new Map();
+  allEntries.forEach(e => {
+    if (!e.date) return;
+    const d = e.date.toDate();
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    if (!seen.has(key)) {
+      seen.set(key, {
+        year: d.getFullYear(),
+        month: d.getMonth(),
+        label: d.toLocaleDateString(undefined, { year: 'numeric', month: 'long' })
+      });
+    }
+  });
+  return Array.from(seen.values()).sort((a, b) => (b.year - a.year) || (b.month - a.month));
+}
+
+document.getElementById('filterBtn').onclick = () => {
+  const wrap = document.getElementById('filterOptions');
+  wrap.innerHTML = '';
+
+  const allChip = document.createElement('div');
+  allChip.className = 'tag-chip' + (activeFilter ? '' : ' selected');
+  allChip.textContent = 'All time';
+  allChip.onclick = () => { activeFilter = null; renderFeed(); toggle('filterModal', false); };
+  wrap.appendChild(allChip);
+
+  availableMonths().forEach(m => {
+    const chip = document.createElement('div');
+    const isActive = activeFilter && activeFilter.year === m.year && activeFilter.month === m.month;
+    chip.className = 'tag-chip' + (isActive ? ' selected' : '');
+    chip.textContent = m.label;
+    chip.onclick = () => { activeFilter = { year: m.year, month: m.month }; renderFeed(); toggle('filterModal', false); };
+    wrap.appendChild(chip);
+  });
+
+  toggle('filterModal', true);
+};
+
+// ---------- Image viewer: open/zoom/delete ----------
+function setupZoom(imgEl, wrapEl) {
+  let scale = 1, startScale = 1, panX = 0, panY = 0, startPanX = 0, startPanY = 0;
+  let lastDist = null, lastTap = 0;
+
+  function apply() { imgEl.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; }
+  function reset() { scale = 1; panX = 0; panY = 0; apply(); }
+  function dist(t) { const dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY; return Math.hypot(dx, dy); }
+  function toggleZoom() {
+    scale = scale > 1 ? 1 : 2.5;
+    panX = 0; panY = 0;
+    apply();
+  }
+
+  wrapEl.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) { lastDist = dist(e.touches); startScale = scale; }
+    else if (e.touches.length === 1) { startPanX = e.touches[0].clientX - panX; startPanY = e.touches[0].clientY - panY; }
+  });
+  wrapEl.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && lastDist) {
+      e.preventDefault();
+      scale = Math.min(Math.max(startScale * (dist(e.touches) / lastDist), 1), 4);
+      apply();
+    } else if (e.touches.length === 1 && scale > 1) {
+      e.preventDefault();
+      panX = e.touches[0].clientX - startPanX;
+      panY = e.touches[0].clientY - startPanY;
+      apply();
+    }
+  }, { passive: false });
+  wrapEl.addEventListener('touchend', (e) => {
+    if (e.touches.length < 2) lastDist = null;
+    const now = Date.now();
+    if (now - lastTap < 300) toggleZoom();
+    lastTap = now;
+  });
+  wrapEl.addEventListener('dblclick', toggleZoom);
+
+  return { reset };
+}
+const viewerZoom = setupZoom(document.getElementById('viewerImg'), document.getElementById('viewerZoomWrap'));
+
+function openViewer(entry) {
+  currentViewerEntryId = entry.id;
+  currentViewerEntry = entry;
+  document.getElementById('viewerImg').src = entry.imageUrl;
+
+  const captionEl = document.getElementById('viewerCaption');
+  captionEl.textContent = entry.caption || '';
+  captionEl.style.display = entry.caption ? 'block' : 'none';
+
+  const moodEl = document.getElementById('viewerMood');
+  moodEl.textContent = entry.mood ? `Feeling: ${entry.mood}` : '';
+  moodEl.style.display = entry.mood ? 'block' : 'none';
+
+  const memDate = entry.date ? entry.date.toDate() : null;
+  const uploadDate = (entry.createdAt && entry.createdAt.toDate) ? entry.createdAt.toDate() : null;
+  const parts = [];
+  if (memDate) parts.push(memDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }));
+  if (uploadDate) {
+    parts.push(`uploaded ${uploadDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} at ${uploadDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`);
+  }
+  document.getElementById('viewerMeta').textContent = parts.join(' · ');
+
+  disarmDelete();
+  viewerZoom.reset();
+  toggle('viewerModal', true);
+}
+
+let deleteArmed = false, deleteArmTimeout = null;
+const viewerDeleteBtn = document.getElementById('viewerDeleteBtn');
+function disarmDelete() {
+  deleteArmed = false;
+  clearTimeout(deleteArmTimeout);
+  viewerDeleteBtn.classList.remove('armed');
+  viewerDeleteBtn.textContent = 'Delete photo';
+}
+
+// ---------- Download ----------
+const viewerDownloadBtn = document.getElementById('viewerDownloadBtn');
+viewerDownloadBtn.onclick = async () => {
+  if (!currentViewerEntry) return;
+  const { imageUrl, caption, date } = currentViewerEntry;
+  const d = date && date.toDate ? date.toDate() : new Date();
+  const stamp = d.toISOString().split('T')[0];
+  const safeCaption = (caption || 'memory').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'memory';
+  const filename = `${stamp}-${safeCaption}.jpg`;
+
+  const original = viewerDownloadBtn.innerHTML;
+  try {
+    // Fetch as a blob so the download works even though the image is hosted
+    // cross-origin (a plain <a download> gets ignored cross-origin and just
+    // opens the image in a new tab instead of saving it).
+    const res = await fetch(imageUrl);
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 4000);
+  } catch (err) {
+    // Fallback: open the original image in a new tab so the user can still save it manually.
+    window.open(imageUrl, '_blank');
+  }
+};
+viewerDeleteBtn.onclick = async () => {
+  if (!currentViewerEntryId) return;
+  if (!deleteArmed) {
+    deleteArmed = true;
+    viewerDeleteBtn.classList.add('armed');
+    viewerDeleteBtn.textContent = 'Tap again to confirm delete';
+    deleteArmTimeout = setTimeout(disarmDelete, 3000);
+    return;
+  }
+  clearTimeout(deleteArmTimeout);
+  viewerDeleteBtn.disabled = true;
+  viewerDeleteBtn.textContent = 'Deleting…';
+  try {
+    await deleteDoc(doc(db, 'entries', currentViewerEntryId));
+    toggle('viewerModal', false);
+    viewerDeleteBtn.disabled = false;
+    disarmDelete();
+  } catch (err) {
+    deleteArmed = false;
+    viewerDeleteBtn.classList.remove('armed');
+    viewerDeleteBtn.textContent = 'Could not delete — try again';
+    viewerDeleteBtn.disabled = false;
+  }
+};
+
+// ---------- Modal helpers ----------
+function toggle(id, show) {
+  document.getElementById(id).classList.toggle('hidden', !show);
+}
+document.querySelectorAll('[data-close]').forEach(btn => {
+  btn.onclick = () => toggle(btn.dataset.close, false);
+});
+</script>
+</body>
+</html>

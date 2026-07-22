@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Sign in — #ENJOY Vault</title>
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#111111">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ENJOY Vault">
+<script>if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}); }</script>
+</head>
+<body>
+<div class="center-screen">
+  <div class="auth-card">
+    <div class="mark">Private</div>
+    <h1>#ENJOY Vault</h1>
+    <form id="loginForm">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="email" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="password" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-primary" id="loginBtn">Sign in</button>
+      <div class="error-msg" id="errorMsg"></div>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+  import { auth } from './firebase-config.js';
+  import { signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  // Already signed in (and not anonymous/guest) -> go straight to dashboard
+  onAuthStateChanged(auth, (user) => {
+    if (user && !user.isAnonymous) window.location.href = 'dashboard.html';
+  });
+
+  const form = document.getElementById('loginForm');
+  const errorMsg = document.getElementById('errorMsg');
+  const loginBtn = document.getElementById('loginBtn');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorMsg.textContent = '';
+    loginBtn.disabled = true;
+    loginBtn.textContent = 'Signing in…';
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      window.location.href = 'dashboard.html';
+    } catch (err) {
+      errorMsg.textContent = 'Could not sign in — check your email and password.';
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'Sign in';
+    }
+  });
+</script>
+</body>
+</html>
