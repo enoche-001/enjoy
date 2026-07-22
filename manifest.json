@@ -2,7 +2,7 @@
   "name": "#ENJOY Vault",
   "short_name": "ENJOY Vault",
   "description": "A private, locked photo & memory vault.",
-  "start_url": "login.html",
+  "start_url": "index.html",
   "scope": ".",
   "display": "standalone",
   "orientation": "portrait",
