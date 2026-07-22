@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "enoch.jana.enjoyvaultapk",
+        "sha256_cert_fingerprints": ["3F:DC:E0:21:82:21:5E:29:53:46:58:B3:89:E7:1D:9F:BF:66:51:30:90:C7:A3:1F:29:80:CD:57:DD:B5:50:0D"]
+      }
+    }]
