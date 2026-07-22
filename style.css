@@ -54,6 +54,11 @@ input[type=date], input[type=number], textarea, select{
   appearance:none; -webkit-appearance:none;
 }
 textarea{ resize:vertical; }
+
+/* Visually mask passcode/passkey digits without using type="password" —
+   keeps Chrome's save-password / autofill suggestion UI from ever triggering
+   on these fields, since that only activates on real password inputs. */
+.masked-numeric{ -webkit-text-security: disc; text-security: disc; }
 input::placeholder, textarea::placeholder{ color:var(--muted); }
 input:focus, textarea:focus, select:focus{ outline:2px solid var(--black); outline-offset:1px; }
 
