@@ -6,7 +6,7 @@
 
 const CACHE_NAME = 'enjoy-vault-shell-v1';
 const SHELL_FILES = [
-  'login.html',
+  'index.html',
   'dashboard.html',
   'guest.html',
   'style.css',
