@@ -142,7 +142,9 @@
 
 <script type="module">
 import { auth, db, compressImage, uploadToImgBB, generateToken } from './firebase-config.js';
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { onAuthStateChanged, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const UNLOCK_KEY = 'enjoyVaultUnlocked';
 import {
   collection, addDoc, doc, getDoc, setDoc, deleteDoc, query, orderBy, onSnapshot, serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -199,14 +201,25 @@ if (cachedEntries && cachedEntries.length) {
   renderFeed();
 }
 
-onAuthStateChanged(auth, (user) => {
-  if (!user || user.isAnonymous) { window.location.href = 'index.html'; return; }
-  currentUser = user;
-  listenToEntries();
-});
+// Gate the dashboard on the passkey flag, not on a real signed-in identity —
+// there's no more email/password account. We still need *some* Firebase auth
+// session (anonymous is fine) so Firestore's "request.auth != null" rules hold.
+if (localStorage.getItem(UNLOCK_KEY) !== '1') {
+  window.location.href = 'index.html';
+} else {
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      currentUser = user;
+      listenToEntries();
+    } else {
+      signInAnonymously(auth).catch(() => { window.location.href = 'index.html'; });
+    }
+  });
+}
 
 document.getElementById('logoutBtn').onclick = () => {
-  signOut(auth).then(() => window.location.href = 'index.html');
+  localStorage.removeItem(UNLOCK_KEY);
+  signOut(auth).then(() => window.location.href = 'index.html').catch(() => window.location.href = 'index.html');
 };
 
 // ---------- Feed ----------

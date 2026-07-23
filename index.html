@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-<title>Sign in — #ENJOY Vault</title>
+<title>#ENJOY Vault</title>
 <link rel="stylesheet" href="style.css">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -19,49 +19,82 @@
   <div class="auth-card">
     <div class="mark">Private</div>
     <h1>#ENJOY Vault</h1>
-    <form id="loginForm">
-      <div class="field">
-        <label>Email</label>
-        <input type="email" id="email" required autocomplete="username">
-      </div>
-      <div class="field">
-        <label>Password</label>
-        <input type="password" id="password" required autocomplete="current-password">
-      </div>
-      <button type="submit" class="btn btn-primary" id="loginBtn">Sign in</button>
-      <div class="error-msg" id="errorMsg"></div>
-    </form>
+    <!-- No <form> on purpose: form submission is one of the main signals Chrome
+         uses to trigger "Save password?" — a plain button + click handler avoids it. -->
+    <div class="field">
+      <label>Passkey</label>
+      <input
+        type="text"
+        id="passkey"
+        class="masked-numeric"
+        inputmode="text"
+        placeholder="Enter passkey"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
+        data-lpignore="true"
+        data-1p-ignore
+        data-form-type="other"
+        name="vk-field-9f2">
+    </div>
+    <button type="button" class="btn btn-primary" id="loginBtn">Unlock</button>
+    <div class="error-msg" id="errorMsg"></div>
   </div>
 </div>
 
 <script type="module">
   import { auth } from './firebase-config.js';
-  import { signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-  // Already signed in (and not anonymous/guest) -> go straight to dashboard
-  onAuthStateChanged(auth, (user) => {
-    if (user && !user.isAnonymous) window.location.href = 'dashboard.html';
-  });
+  // ---- Hardcoded passkey gate ----
+  // This is a client-side-only check: anyone who reads this file's source (or
+  // your deployed JS) can see the passkey. It keeps out casual visitors and
+  // stops the app from showing content instantly to anyone who lands on the
+  // URL, but it is not real server-side security. Treat the URL itself as
+  // semi-private too.
+  const VAULT_PASSKEY = "CHANGE-THIS-PASSKEY";
+  const UNLOCK_KEY = 'enjoyVaultUnlocked';
 
-  const form = document.getElementById('loginForm');
+  // Already unlocked on this device -> skip straight to the dashboard.
+  if (localStorage.getItem(UNLOCK_KEY) === '1') {
+    window.location.href = 'dashboard.html';
+  }
+
+  const passkeyInput = document.getElementById('passkey');
   const errorMsg = document.getElementById('errorMsg');
   const loginBtn = document.getElementById('loginBtn');
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  async function attemptUnlock() {
     errorMsg.textContent = '';
+    const entered = passkeyInput.value.trim();
+    if (!entered) { errorMsg.textContent = 'Enter the passkey.'; return; }
+
+    if (entered !== VAULT_PASSKEY) {
+      errorMsg.textContent = 'Wrong passkey.';
+      passkeyInput.value = '';
+      passkeyInput.focus();
+      return;
+    }
+
     loginBtn.disabled = true;
-    loginBtn.textContent = 'Signing in…';
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
+    loginBtn.textContent = 'Unlocking…';
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      // Needed so Firestore security rules (request.auth != null) still hold —
+      // this is invisible to the person, there's no account/email attached to it.
+      if (!auth.currentUser) await signInAnonymously(auth);
+      localStorage.setItem(UNLOCK_KEY, '1');
       window.location.href = 'dashboard.html';
     } catch (err) {
-      errorMsg.textContent = 'Could not sign in — check your email and password.';
+      errorMsg.textContent = 'Could not connect — check your internet and try again.';
       loginBtn.disabled = false;
-      loginBtn.textContent = 'Sign in';
+      loginBtn.textContent = 'Unlock';
     }
+  }
+
+  loginBtn.addEventListener('click', attemptUnlock);
+  passkeyInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') attemptUnlock();
   });
 </script>
 </body>
